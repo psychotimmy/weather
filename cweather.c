@@ -329,19 +329,20 @@ int main() {
       sprintf(str,"Pressure %.1fmb",p);	// print sea level pressure
       printToLCD(lcdfd,0,2,str);
       
-      if (j <= 180) {                       // don't produce a forecast if less than 3 hours of data available
-         threeHours[ptrNow]=p;
+      if (j < 180) {                       // don't produce a forecast if less than 3 hours of data available
+         threeHours[j]=p;
+         printf("%d %f\n",j,threeHours[j]);
          sprintf(str,"Forecast in %d mins",180-j);
          printToLCD(lcdfd,0,3,str);
       } else {
          ptrNow=j%180;                         // calculate the pointer to the 3 hour circular buffer
+         ptrThen=(j+1)%180;
          threeHours[ptrNow]=p;
-         ptrThen=(ptrNow+1)%180;
          threeHoursDiff=threeHours[ptrNow]-threeHours[ptrThen];
          makeForecast(lcdfd,threeHoursDiff);
       }
       ++j;                  // increment the pointer to the pressure buffer
-      delay(60000);         // get the next readings in one minute
+      delay(200);         // get the next readings in one minute
    }
    return (0);
 }
