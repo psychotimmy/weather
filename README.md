@@ -78,5 +78,3 @@
 # other rights of third parties which may result from its use.
 # No license is granted by implication or otherwise under any patent or
 # patent rights of the copyright holder.
-
-#endif
