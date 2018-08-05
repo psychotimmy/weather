@@ -342,7 +342,7 @@ int main() {
          makeForecast(lcdfd,threeHoursDiff);
       }
       ++j;                  // increment the pointer to the pressure buffer
-      delay(200);         // get the next readings in one minute
+      delay(60000);         // get the next readings in one minute
    }
    return (0);
 }
