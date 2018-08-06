@@ -2,7 +2,7 @@
 /*	        						      */
 /* Raspberry Pi weather station on 20x4 lcd using bme280 sensor (I2C) */
 /* Tim Holyoake	19/07/2018					      */
-/* Last updated	05/08/2018 					      */
+/* Last updated	06/08/2018 					      */
 /*								      */
 /**********************************************************************/
 
@@ -12,6 +12,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <unistd.h>
 #include <errno.h>
 
 #include <wiringPi.h>
@@ -19,6 +20,13 @@
 #include <pcf8574.h>
 #include <lcd.h>
 #include "hweather.h"
+
+/* Global static variables that can be reset on the command line */
+
+float altAboveSeaLevel = 117.0;     // -a <value>
+int   delayTime = 60000;            // -d <value> - debugging use only!
+
+/* End global statics */
 
 void printToLCD(int fd, int cpos, int line, char *str) {
 /*******************************************************/
@@ -36,7 +44,7 @@ void printToLCD(int fd, int cpos, int line, char *str) {
       lcdPosition(fd,cpos,line);
       lcdPrintf(fd,str);
    } else {
-      printf("printToLCD failed with invalid handle\n");
+      fprintf(stderr, "printToLCD failed with invalid handle\n");
       exit(1);
    }
 }
@@ -243,7 +251,75 @@ void makeForecast(int fd,float pdiff) {
    return;
 }
 
-int main() {
+void usage() {
+/******************************************************/
+/*                                                    */
+/* Usage hints for command line arguments.            */
+/*                                                    */
+/* TJH 06-08-2018                                     */
+/*                                                    */
+/******************************************************/
+   fprintf(stderr, "\n" \
+      "Usage: weather [option] ...\n" \
+      "   -d value, delay between readings in milliseconds (debugging only - 100 to 60000 is valid range)   default 60000 (1 minute) \n" \
+      "   -a value, altitude above sea level in metres                                                      default 117.0 \n\n");
+}
+
+int getNum(char *str, int *err) {
+/******************************************************/
+/*                                                    */
+/* Get the numerical value of a command line argument */
+/*                                                    */
+/* TJH 06-08-2018                                     */
+/*                                                    */
+/******************************************************/
+   int val;
+   char *ptr;
+
+   *err = 0;
+   val = strtoll(str, &ptr, 0);
+   if (*ptr) {
+      *err = 1; 
+      val = -1;
+   }
+   return (val);
+}
+
+void parseCmdLine(int argc, char *argv[]) {
+/******************************************************/
+/*                                                    */
+/* Parse and act on any command line arguments.       */
+/*                                                    */
+/* TJH 06-08-2018                                     */
+/*                                                    */
+/******************************************************/
+
+   int opt, err, i;
+
+   while ((opt = getopt(argc, argv, "a:d:")) != -1)
+
+   {
+      switch (opt)
+      {
+         case 'd':
+            i = getNum(optarg, &err);
+            if ((i >= 100) && (i <= 60000)) delayTime = i;
+            break;
+
+         case 'a':
+            i = getNum(optarg, &err);
+            altAboveSeaLevel = i;
+            break;
+
+        default: /* '?' */
+           usage();
+           exit(-1);
+       }
+   }
+   return;
+}
+
+int main(int argc, char *argv[]) {
 /******************************************************/
 /*                                                    */
 /* Main programme loop - initiatise the I2C devices,  */
@@ -251,13 +327,13 @@ int main() {
 /* Store 3 hours of pressure data and make forecast,  */
 /* Write to LCD and repeat every minute.              */
 /*                                                    */
-/* TJH 05-08-2018                                     */
+/* TJH 06-08-2018                                     */
 /*                                                    */
 /******************************************************/
    int i,j,ptrNow,ptrThen,lcdfd,bme280fd;
    int32_t t_fine;
    char *str;
-   float alt,threeHours[180],threeHoursDiff;
+   float threeHours[180],threeHoursDiff;
    float t,p,h,d;
    bme280_cal cal;
    bme280_raw raw;
@@ -265,9 +341,11 @@ int main() {
    extern float spress_();
    extern float comtem_();
 
+   parseCmdLine(argc, argv);
+
    // Initialise wiringPi library
    if(wiringPiSetup() == -1){ //when initialise wiringPi failed print messageto screen
-      printf("wiringPi initialisation failed\n");
+      fprintf(stderr, "wiringPi initialisation failed\n");
       exit(1); 
    }
 
@@ -279,14 +357,14 @@ int main() {
    // Initialise the LCD and return a handle to it
    lcdfd = lcdInit(LCDROWS,LCDCOLS,LCDBITS,RS,EN,D4,D5,D6,D7,0,0,0,0);
    if(lcdfd <0){
-      printf("LCD display initalisation failed\n");
+      fprintf(stderr, "LCD display initalisation failed\n");
       exit(1);
    }
 
    // Initialise the BME280 sensor and return a handle
    bme280fd = wiringPiI2CSetup(BME280_ADDRESS);
    if(bme280fd < 0) {
-      printf("BME280 sensor initialisation failed\n");
+      fprintf(stderr, "BME280 sensor initialisation failed\n");
       exit(1);
    }
 
@@ -296,8 +374,6 @@ int main() {
    readCalibrationData(bme280fd, &cal);             // read the BME280 calibration data
 
    j=0;    // Pointer to location in threeHours circular buffer - pressure records
-
-   alt = MYALT;	// Set alt to contain the current height above sea level - see hweather.h
 
    while(TRUE) {
       // Read the BME 280 sensor
@@ -314,7 +390,7 @@ int main() {
 
       // Convention requires absolute pressure to be converted to sea level pressure for weather forecasting
           
-      p = spress_(&p,&alt,&t);
+      p = spress_(&p,&altAboveSeaLevel,&t);
 
       lcdClear(lcdfd);        		// clear the display
       str=getLocalTime();	  	// get the local time
@@ -331,7 +407,6 @@ int main() {
       
       if (j < 180) {                       // don't produce a forecast if less than 3 hours of data available
          threeHours[j]=p;
-         printf("%d %f\n",j,threeHours[j]);
          sprintf(str,"Forecast in %d mins",180-j);
          printToLCD(lcdfd,0,3,str);
       } else {
@@ -341,8 +416,8 @@ int main() {
          threeHoursDiff=threeHours[ptrNow]-threeHours[ptrThen];
          makeForecast(lcdfd,threeHoursDiff);
       }
-      ++j;                  // increment the pointer to the pressure buffer
-      delay(60000);         // get the next readings in one minute
+      ++j;                      // increment the pointer to the pressure buffer
+      delay(delayTime);         // get the next readings in one minute (or less, if -d option used for debugging)
    }
    return (0);
 }
