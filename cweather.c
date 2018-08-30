@@ -2,7 +2,7 @@
 /*	        						      */
 /* Raspberry Pi weather station on 20x4 lcd using bme280 sensor (I2C) */
 /* Tim Holyoake	19/07/2018					      */
-/* Last updated	06/08/2018 					      */
+/* Last updated	30/08/2018 					      */
 /*								      */
 /**********************************************************************/
 
@@ -24,6 +24,7 @@
 /* Global static variables that can be reset on the command line */
 
 float altAboveSeaLevel = 117.0;     // -a <value>
+char *filename = "readings.txt";    // -f <value>
 int   delayTime = 60000;            // -d <value> - debugging use only!
 
 /* End global statics */
@@ -49,20 +50,35 @@ void printToLCD(int fd, int cpos, int line, char *str) {
    }
 }
 
-char *getLocalTime() {
+char *getLocalTime(char *format) {
 /*******************************************************/
 /*                                                     */
-/* Used to return the local time                       */
+/* Used to return the local date and/or time.          */
 /*                                                     */
-/* TJH 21-07-2018                                      */
+/* format can be LCD or any other string               */
+/*                                                     */
+/* LCD returns the string Time hh:mm                   */
+/* otherwise the string dd:mm:yyyy,hh:mm is returned   */
+/*                                                     */
+/* TJH 30-08-2018                                      */
 /*                                                     */
 /*******************************************************/
    time_t utctime;
    struct tm *local;
-   static char timestr[20];
+   static char timestr[80];
    time(&utctime);		
    local = localtime(&utctime);	
-   sprintf(timestr,"Time %02d:%02d",local->tm_hour,local->tm_min);
+   if (strcmp(format,"LCD") == 0) {
+      sprintf(timestr,"Time %02d:%02d",local->tm_hour,local->tm_min);
+   } else {
+      sprintf(timestr,"%02d:%02d:%04d,%02d:%02d", 
+              local->tm_mday,
+              local->tm_mon,
+              local->tm_year+1900,
+              local->tm_hour,
+              local->tm_min);
+   }
+
    return (timestr);
 }
 
@@ -262,6 +278,7 @@ void usage() {
    fprintf(stderr, "\n" \
       "Usage: weather [option] ...\n" \
       "   -d value, delay between readings in milliseconds (debugging only - 100 to 60000 is valid range)   default 60000 (1 minute) \n" \
+      "   -f value, filename for 15 minute readings to be stored                                            default readings.txt \n" \
       "   -a value, altitude above sea level in metres                                                      default 117.0 \n\n");
 }
 
@@ -296,11 +313,15 @@ void parseCmdLine(int argc, char *argv[]) {
 
    int opt, err, i;
 
-   while ((opt = getopt(argc, argv, "a:d:")) != -1)
+   while ((opt = getopt(argc, argv, "a:d:f:")) != -1)
 
    {
       switch (opt)
       {
+         case 'f':
+            filename = argv[optind-1];
+            break;
+            
          case 'd':
             i = getNum(optarg, &err);
             if ((i >= 100) && (i <= 60000)) delayTime = i;
@@ -332,11 +353,12 @@ int main(int argc, char *argv[]) {
 /******************************************************/
    int i,j,ptrNow,ptrThen,lcdfd,bme280fd;
    int32_t t_fine;
-   char *str;
+   char *str,*strt;
    float threeHours[180],threeHoursDiff;
    float t,p,h,d;
    bme280_cal cal;
    bme280_raw raw;
+   FILE *filefd;
    extern float rdewpt_();
    extern float spress_();
    extern float comtem_();
@@ -393,7 +415,7 @@ int main(int argc, char *argv[]) {
       p = spress_(&p,&altAboveSeaLevel,&t);
 
       lcdClear(lcdfd);        		// clear the display
-      str=getLocalTime();	  	// get the local time
+      str=getLocalTime("LCD");	  	// get the local time for the LCD
       printToLCD(lcdfd,0,0,str); 	// print local time
       sprintf(str,"Temp %.1fC",t);      // print temperature
       printToLCD(lcdfd,0,1,str);            
@@ -416,6 +438,22 @@ int main(int argc, char *argv[]) {
          threeHoursDiff=threeHours[ptrNow]-threeHours[ptrThen];
          makeForecast(lcdfd,threeHoursDiff);
       }
+
+      // write csv data to file every 15 intervals (minutes when not in debug mode) - can be used as input to programs like gnuplot
+
+      if (j%15 == 0) {
+         filefd=fopen(filename,"a");
+         if (filefd != NULL) {
+            strt=getLocalTime("FULL");     // get the full date and local time
+            sprintf(str,"%s,%.1f,%.1f,%.1f,%.1f\n",strt,t,d,h,p);
+            fputs(str,filefd);
+            fclose(filefd);
+         }
+         else {
+            fprintf(stderr,"Failed to open %s - no data logged\n",filename);
+         }
+      }
+      
       ++j;                      // increment the pointer to the pressure buffer
       delay(delayTime);         // get the next readings in one minute (or less, if -d option used for debugging)
    }
