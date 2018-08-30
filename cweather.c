@@ -73,7 +73,7 @@ char *getLocalTime(char *format) {
    } else {
       sprintf(timestr,"%02d:%02d:%04d,%02d:%02d", 
               local->tm_mday,
-              local->tm_mon,
+              local->tm_mon+1,
               local->tm_year+1900,
               local->tm_hour,
               local->tm_min);
