@@ -149,7 +149,9 @@ C
 C           CHECK IZ NOT OUT OF RANGE - SHOULDN'T HAPPEN, BUT NEITHER
 C           SHOULD MANMADE CLIMATE CHANGE
 C
-            IF (IZ.GT.9) THEN IZ=9
+            IF (IZ.GT.9) THEN 
+               IZ=9
+            END IF
          END IF
 C
 C        SET THE FORECAST STRING
@@ -199,7 +201,9 @@ C
 C           CHECK IZ NOT OUT OF RANGE - SHOULDN'T HAPPEN, BUT NEITHER
 C           SHOULD MANMADE CLIMATE CHANGE
 C
-            IF (IZ.LT.1) THEN IZ=1
+            IF (IZ.LT.1) THEN 
+               IZ=1
+            END IF
          END IF
 C
 C        SET THE FORECAST STRING
@@ -237,7 +241,7 @@ C
          CFORE=CZSTDY(IZ)
       END IF
 C
-C     DEBUG
+C     DEBUG ONLY
 C     WRITE (*,*) PRESS, " ", IMON, " ", IZ, " ", CIND, " ", CFORE
 C
       RETURN
