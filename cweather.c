@@ -2,7 +2,7 @@
 /*	        						      */
 /* Raspberry Pi weather station on 20x4 lcd using bme280 sensor (I2C) */
 /* Tim Holyoake	19/07/2018					      */
-/* Last updated	30/08/2018 					      */
+/* Last updated	29/08/2019 					      */
 /*								      */
 /**********************************************************************/
 
@@ -55,12 +55,15 @@ char *getLocalTime(char *format) {
 /*                                                     */
 /* Used to return the local date and/or time.          */
 /*                                                     */
-/* format can be LCD or any other string               */
+/* format can be LCD, ZAM or any other string          */
 /*                                                     */
 /* LCD returns the string Time hh:mm                   */
-/* otherwise the string dd:mm:yyyy,hh:mm is returned   */
+/* ZAM returns the integer month number as a string in */
+/* the range 1 to 12 (January to December)             */
+/* otherwise the string dd:mm:yyyy:hh:mm is returned   */
 /*                                                     */
 /* TJH 30-08-2018                                      */
+/*     28-08-2019  ZAM format added                    */
 /*                                                     */
 /*******************************************************/
    time_t utctime;
@@ -70,8 +73,11 @@ char *getLocalTime(char *format) {
    local = localtime(&utctime);	
    if (strcmp(format,"LCD") == 0) {
       sprintf(timestr,"Time %02d:%02d",local->tm_hour,local->tm_min);
-   } else {
-      sprintf(timestr,"%02d:%02d:%04d,%02d:%02d", 
+   } else if (strcmp(format,"ZAM") == 0) {
+      sprintf(timestr,"%d", local->tm_mon+1);
+   }
+   else {
+      sprintf(timestr,"%02d:%02d:%04d:%02d:%02d", 
               local->tm_mday,
               local->tm_mon+1,
               local->tm_year+1900,
@@ -261,7 +267,37 @@ void makeForecast(int fd,float pdiff) {
    mfcast_(&pdiff, &indicator, &forecast); 
    // Null terminate the strings - FORTRAN doesn't do/need this!
    indicator[2]='\0';
-   forecast[21]='\0';
+   forecast[20]='\0';
+   printToLCD(fd,18,2,indicator);
+   printToLCD(fd,0,3,forecast);
+   return;
+}
+
+void makeForecastZambretti(int fd,float pdiff, float press) {
+/******************************************************/
+/*                                                    */
+/* Wrapper for FORTRAN Zambretti forecast model       */
+/* Requires currrent pressure and differences over 3  */
+/* hours for a prediction                             */
+/*                                                    */
+/* TJH 28-08-2019                                     */
+/*                                                    */
+/******************************************************/
+   int imonth;
+   char *str;
+   char indicator[3];
+   char forecast[21];
+   extern void zfcast_();
+
+   // Get the month
+   str=getLocalTime("ZAM");	  	// get the month for the forecast
+   imonth=atoi(str);
+
+   zfcast_(&imonth, &press, &pdiff, &indicator, &forecast); 
+
+   // Null terminate the strings - FORTRAN doesn't do/need this!
+   indicator[2]='\0';
+   forecast[20]='\0';
    printToLCD(fd,18,2,indicator);
    printToLCD(fd,0,3,forecast);
    return;
@@ -436,7 +472,8 @@ int main(int argc, char *argv[]) {
          ptrThen=(j+1)%180;
          threeHours[ptrNow]=p;
          threeHoursDiff=threeHours[ptrNow]-threeHours[ptrThen];
-         makeForecast(lcdfd,threeHoursDiff);
+         /* makeForecast(lcdfd,threeHoursDiff); */
+         makeForecastZambretti(lcdfd,threeHoursDiff,p);
       }
 
       // write csv data to file every 15 intervals (minutes when not in debug mode) - can be used as input to programs like gnuplot
