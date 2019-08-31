@@ -273,7 +273,7 @@ void makeForecast(int fd,float pdiff) {
    return;
 }
 
-void makeForecastZambretti(int fd,float pdiff, float press) {
+char *makeForecastZambretti(int fd,float pdiff, float press) {
 /******************************************************/
 /*                                                    */
 /* Wrapper for FORTRAN Zambretti forecast model       */
@@ -284,14 +284,14 @@ void makeForecastZambretti(int fd,float pdiff, float press) {
 /*                                                    */
 /******************************************************/
    int imonth;
-   char *str;
+   char *strtemp;
    char indicator[3];
-   char forecast[21];
+   static char forecast[21];
    extern void zfcast_();
 
    // Get the month
-   str=getLocalTime("ZAM");	  	// get the month for the forecast
-   imonth=atoi(str);
+   strtemp=getLocalTime("ZAM");	  	// get the month for the forecast
+   imonth=atoi(strtemp);
 
    zfcast_(&imonth, &press, &pdiff, &indicator, &forecast); 
 
@@ -300,7 +300,7 @@ void makeForecastZambretti(int fd,float pdiff, float press) {
    forecast[20]='\0';
    printToLCD(fd,18,2,indicator);
    printToLCD(fd,0,3,forecast);
-   return;
+   return(forecast);
 }
 
 void usage() {
@@ -389,7 +389,9 @@ int main(int argc, char *argv[]) {
 /******************************************************/
    int i,j,ptrNow,ptrThen,lcdfd,bme280fd;
    int32_t t_fine;
-   char *str,*strt;
+   char *str,*strt,*fstr;
+   char ftemp[21];
+   fstr = &ftemp[0];
    float threeHours[180],threeHoursDiff;
    float t,p,h,d;
    bme280_cal cal;
@@ -402,7 +404,7 @@ int main(int argc, char *argv[]) {
    parseCmdLine(argc, argv);
 
    // Initialise wiringPi library
-   if(wiringPiSetup() == -1){ //when initialise wiringPi failed print messageto screen
+   if(wiringPiSetup() == -1){ //when initialise wiringPi failed print message to screen
       fprintf(stderr, "wiringPi initialisation failed\n");
       exit(1); 
    }
@@ -465,15 +467,15 @@ int main(int argc, char *argv[]) {
       
       if (j < 180) {                       // don't produce a forecast if less than 3 hours of data available
          threeHours[j]=p;
-         sprintf(str,"Forecast in %d mins",180-j);
-         printToLCD(lcdfd,0,3,str);
+         sprintf(fstr,"Forecast in %d mins",180-j);
+         printToLCD(lcdfd,0,3,fstr);
       } else {
          ptrNow=j%180;                         // calculate the pointer to the 3 hour circular buffer
          ptrThen=(j+1)%180;
          threeHours[ptrNow]=p;
          threeHoursDiff=threeHours[ptrNow]-threeHours[ptrThen];
          /* makeForecast(lcdfd,threeHoursDiff); */
-         makeForecastZambretti(lcdfd,threeHoursDiff,p);
+         fstr=makeForecastZambretti(lcdfd,threeHoursDiff,p);
       }
 
       // write csv data to file every 15 intervals (minutes when not in debug mode) - can be used as input to programs like gnuplot
@@ -482,7 +484,7 @@ int main(int argc, char *argv[]) {
          filefd=fopen(filename,"a");
          if (filefd != NULL) {
             strt=getLocalTime("FULL");     // get the full date and local time
-            sprintf(str,"%s,%.1f,%.1f,%.1f,%.1f\n",strt,t,d,h,p);
+            sprintf(str,"%s,%.1f,%.1f,%.1f,%.1f,%s\n",strt,t,d,h,p,fstr);
             fputs(str,filefd);
             fclose(filefd);
          }
