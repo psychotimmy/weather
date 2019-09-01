@@ -467,6 +467,7 @@ int main(int argc, char *argv[]) {
       
       if (j < 180) {                       // don't produce a forecast if less than 3 hours of data available
          threeHours[j]=p;
+         threeHoursDiff = 0.0;
          sprintf(fstr,"Forecast in %d mins",180-j);
          printToLCD(lcdfd,0,3,fstr);
       } else {
@@ -484,7 +485,7 @@ int main(int argc, char *argv[]) {
          filefd=fopen(filename,"a");
          if (filefd != NULL) {
             strt=getLocalTime("FULL");     // get the full date and local time
-            sprintf(str,"%s,%.1f,%.1f,%.1f,%.1f,%s\n",strt,t,d,h,p,fstr);
+            sprintf(str,"%s,%.1f,%.1f,%.1f,%.1f,%.2f,%s\n",strt,t,d,h,p,threeHoursDiff,fstr);
             fputs(str,filefd);
             fclose(filefd);
          }
