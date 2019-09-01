@@ -279,7 +279,7 @@ C----------------------------------------------------------------------C
       DATA CZSTDY(1) /'Settled Fine       '/
       DATA CZSTDY(2) /'Fine Weather       '/
       DATA CZSTDY(3) /'Fine : Showers Poss'/
-      DATA CZSTDY(4) /'Fair : Showers Like'/
+      DATA CZSTDY(4) /'Fair : Showers Lkly'/
       DATA CZSTDY(5) /'Showers : Bright In'/
       DATA CZSTDY(6) /'Changeable : Rain  '/
       DATA CZSTDY(7) /'Unsettled : Rain   '/
@@ -292,14 +292,14 @@ C----------------------------------------------------------------------C
       DATA CZRISE(1) /'Settled Fine       '/
       DATA CZRISE(2) /'Fine Weather       '/
       DATA CZRISE(3) /'Becoming Fine      '/
-      DATA CZRISE(4) /'Fairly Fine Improve'/
+      DATA CZRISE(4) /'Fairly Fine Imprvng'/
       DATA CZRISE(5) /'Fairly Fine Showers'/
       DATA CZRISE(6) /'Showery : Improving'/
-      DATA CZRISE(7) /'Changeable Mending '/
+      DATA CZRISE(7) /'Changeable : Mendng '/
       DATA CZRISE(8) /'Unsettled : Clearng'/
       DATA CZRISE(9) /'Unsettled : May Imp'/
       DATA CZRISE(10) /'Unsettled : Fine In'/
-      DATA CZRISE(11) /'V. Unsettled       '/
+      DATA CZRISE(11) /'Very Unsettled     '/
       DATA CZRISE(12) /'Stormy : Poss Imprv'/
       DATA CZRISE(13) /'Stormy : Much Rain '/
 
