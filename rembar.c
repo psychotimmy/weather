@@ -262,7 +262,7 @@ int main(void){
            digitalWrite(LED,HIGH);
            backlighton=TRUE;
         }
-        delay(30000);
+        delay(300000);
     }
 
     // Should never get here ...
