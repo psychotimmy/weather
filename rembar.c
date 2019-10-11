@@ -15,6 +15,7 @@
 /* To compile: gcc rembar.c -o rembar -lwiringPi -lwiringPiDev -Wall   */
 /*                                                                     */
 /* Tim Holyoake, 6th October 2019                                      */
+/*               Last updated 11th October 2019                        */
 /*                                                                     */
 /***********************************************************************/
 #include <stdlib.h>
@@ -205,8 +206,23 @@ void clearDisplay() {
     lcdPrintf(lcdhd,"                    ");
 }
 
+int getLocalTimeHour() {
+/***********************************************************************/
+/*                                                                     */
+/* Used to return the local time - current hour                        */
+/*                                                                     */
+/* Tim Holyoake 11th October 2019                                      */
+/*                                                                     */
+/***********************************************************************/
+   time_t utctime;
+   struct tm *local;
+   time(&utctime);		
+   local = localtime(&utctime);	
+   return (local->tm_hour);
+}
+
 int main(void){
-    int i;
+    int i,backlighton;
     
     // Initialise the wiringPi library
     if(wiringPiSetup() == -1){ 
@@ -221,6 +237,7 @@ int main(void){
     } 
 
     digitalWrite(LED,HIGH);     			// turn on LCD backlight
+    backlighton=TRUE;
     digitalWrite(RW,LOW);       			// allow writing to LCD
 
     // Initialise the LCD and return a handle to it
@@ -236,7 +253,16 @@ int main(void){
     while(TRUE){
         getLastReading();
         printBarFile();
-        delay(300000);
+        // Toggle the backlight on or off depending on time of day - off after 2200, on after 0700
+        if (getLocalTimeHour() == 22 && backlighton) {
+           digitalWrite(LED,LOW);
+           backlighton=FALSE;
+        }
+        else if (getLocalTimeHour() == 7 && !backlighton) {
+           digitalWrite(LED,HIGH);
+           backlighton=TRUE;
+        }
+        delay(30000);
     }
 
     // Should never get here ...
@@ -246,4 +272,3 @@ int main(void){
 
     return(0);
 }
-
