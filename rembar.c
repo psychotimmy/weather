@@ -58,16 +58,19 @@ void getLastReading() {
 /*                                                                     */
 /* Function to get the last recorded reading from the remote Zambretti */
 /* forecaster. The current implementation is far from ideal as it uses */
-/* system commands to copy the 'readings.txt' file that the forecaster */
-/* creates and then uses tail-1 to extract the last reading from the   */
-/* file. All values are also hardcoded into this function ... but it   */
+/* system commands to remotely create the lastreadings.txt file from   */
+/* the readings.txt file on the forecaster and then copy it to the pi  */
+/* running the remote LCD screen.                                      */
+/*                                                                     */
+/* All values are also hardcoded into this function ... but it         */
 /* does work!                                                          */
 /*                                                                     */
 /* Tim Holyoake, 6th October 2019                                      */
+/*               Modified 17th October 2019 to reduce the amount of    */
+/*               data copied over the network each time this is called */
 /*                                                                     */
 /***********************************************************************/
-    system("scp -q pi@roobarb:/home/pi/zambretti/readings.txt .");
-    system("tail -1 readings.txt > lastreading.txt");
+    system("ssh pi@roobarb tail -1 /home/pi/zambretti/readings.txt > lastreading.txt");
 }
 
 void printBarFile() {
@@ -183,16 +186,16 @@ void printBarFile() {
    
     lcdPosition(lcdhd, 0, 0);
     lcdPrintf(lcdhd, str_date);
-    printf("%s\n",str_date); 
+    //printf("%s\n",str_date); 
     lcdPosition(lcdhd, 0, 1);
     lcdPrintf(lcdhd, str_press);
-    printf("%s\n",str_press);
+    //printf("%s\n",str_press);
     lcdPosition(lcdhd, 0, 2);
     lcdPrintf(lcdhd, str_change);
-    printf("%s\n",str_change);
+    //printf("%s\n",str_change);
     lcdPosition(lcdhd, 0, 3);
     lcdPrintf(lcdhd, str_fore);
-    printf("%s\n",str_fore);
+    //printf("%s\n",str_fore);
 }
 
 void clearDisplay() {
