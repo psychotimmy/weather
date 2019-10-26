@@ -15,7 +15,7 @@
 /* To compile: gcc rembar.c -o rembar -lwiringPi -lwiringPiDev -Wall   */
 /*                                                                     */
 /* Tim Holyoake, 6th October 2019                                      */
-/*               Last updated 11th October 2019                        */
+/*               Last updated 26th October 2019                        */
 /*                                                                     */
 /***********************************************************************/
 #include <stdlib.h>
@@ -44,6 +44,11 @@
 #define D5      BASE+5
 #define D6      BASE+6
 #define D7      BASE+7
+
+/* Define the hours at which the LCD display is turned on and off */
+
+#define ONHOUR   7
+#define OFFHOUR 22
 
 /* Note OUTPUT and TRUE are both defined in wiringPi.h to 1 and (1==1) respectively */
 
@@ -225,7 +230,7 @@ int getLocalTimeHour() {
 }
 
 int main(void){
-    int i,backlighton;
+    int i,backlighton,hour;
     
     // Initialise the wiringPi library
     if(wiringPiSetup() == -1){ 
@@ -256,12 +261,13 @@ int main(void){
     while(TRUE){
         getLastReading();
         printBarFile();
-        // Toggle the backlight on or off depending on time of day - off after 2200, on after 0700
-        if (getLocalTimeHour() == 22 && backlighton) {
+        // Toggle the backlight on or off depending on time of day - off after OFFHOUR, on after ONHOUR
+        hour = getLocalTimeHour();
+        if ((hour >= OFFHOUR && backlighton) || (hour < ONHOUR && backlighton)) {
            digitalWrite(LED,LOW);
            backlighton=FALSE;
         }
-        else if (getLocalTimeHour() == 7 && !backlighton) {
+        else if ((hour >= ONHOUR && !backlighton) && (hour < OFFHOUR && !backlighton)) {
            digitalWrite(LED,HIGH);
            backlighton=TRUE;
         }
