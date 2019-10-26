@@ -141,7 +141,16 @@ void printBarFile() {
     i=10;
 
     // Pressure reading will be 5 or 6 characters, so put each character into the output buffer
-    // until the next comma is found
+    // until the next comma is found.
+
+    if (str_temp[p] == '1') {        // If the first pressure reading character is 1, pressure reading is 6 characters
+       str_press[i++] = ' ';           // A pretty display needs one extra blank if pressure >= 1000mb, two if < 1000mb
+    } else {
+       str_press[i++] = ' ';
+       str_press[i++] = ' ';
+    }
+    str_press[i++]=str_temp[p++];
+
     while (j<5) {
       str_press[i++]=str_temp[p++];
       if (str_temp[p]==',') ++j;
