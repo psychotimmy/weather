@@ -50,6 +50,10 @@
 #define ONHOUR   7
 #define OFFHOUR 22
 
+/* Define the frequency in ms that the remote barometer is polled for data */
+
+#define POLLTIME 120000
+
 /* Note OUTPUT and TRUE are both defined in wiringPi.h to 1 and (1==1) respectively */
 
 /* Start global variables */
@@ -100,7 +104,7 @@ void printBarFile() {
     char str_press[21]="Pressure: ";
     char str_change[21]="Change: ";
     char str_fore[21]=" ";
-    int i,j,p;
+    int i,j,l,p;
 
     // Read the one line of data from the lastreading.txt file
 
@@ -143,7 +147,7 @@ void printBarFile() {
     // Pressure reading will be 5 or 6 characters, so put each character into the output buffer
     // until the next comma is found.
 
-    if (str_temp[p] == '1') {        // If the first pressure reading character is 1, pressure reading is 6 characters
+    if (str_temp[p] == '1') {          // If the first pressure reading character is 1, pressure reading is 6 characters
        str_press[i++] = ' ';           // A pretty display needs one extra blank if pressure >= 1000mb, two if < 1000mb
     } else {
        str_press[i++] = ' ';
@@ -156,11 +160,10 @@ void printBarFile() {
       if (str_temp[p]==',') ++j;
     }
    
-    // End the pressure string with " mb", pad with spaces to column 20 and then null termintate
-    str_press[i++]=' ';
-    str_press[i++]='m';
-    str_press[i++]='b';
-    while (i<20) str_press[i++]=' ';
+    // End the pressure string with " mb" and then null termintate
+    str_press[17]=' ';
+    str_press[18]='m';
+    str_press[19]='b';
     str_press[20]='\0';
     ++p;
 
@@ -171,16 +174,26 @@ void printBarFile() {
 
     // Pressure change will between 4 and 6 characters (x.xx to -xx.xx),
     // so put each character into the output buffer until the next comma is found
+    
     while (j<6) {
       str_change[i++]=str_temp[p++];
       if (str_temp[p]==',') ++j;
     }
 
-    // End the pressure change string with " mb", pad with spaces to column 20 and then null termintate
-    str_change[i++]=' ';
-    str_change[i++]='m';
-    str_change[i++]='b';
-    while (i<20) str_change[i++]=' ';
+    // Shuffle the change in pressure to end in column 16 (array element 17) and
+    // blank pad as necessary
+
+    l=16;
+    i--;
+    while (i>=7) {
+        str_change[l--]=str_change[i];
+        str_change[i--]=' ';
+    }
+
+    // End the pressure change string with " mb" and then null termintate
+    str_change[17]=' ';
+    str_change[18]='m';
+    str_change[19]='b';
     str_change[20]='\0';
     ++p;
 
@@ -196,20 +209,16 @@ void printBarFile() {
     while (i<20) str_fore[i++]=' ';
     str_fore[20]='\0';
 
-    // Write the four output buffers to the LCD display and to standard output
+    // Write the four output buffers to the LCD display
    
     lcdPosition(lcdhd, 0, 0);
     lcdPrintf(lcdhd, str_date);
-    //printf("%s\n",str_date); 
     lcdPosition(lcdhd, 0, 1);
     lcdPrintf(lcdhd, str_press);
-    //printf("%s\n",str_press);
     lcdPosition(lcdhd, 0, 2);
     lcdPrintf(lcdhd, str_change);
-    //printf("%s\n",str_change);
     lcdPosition(lcdhd, 0, 3);
     lcdPrintf(lcdhd, str_fore);
-    //printf("%s\n",str_fore);
 }
 
 void clearDisplay() {
@@ -265,7 +274,7 @@ int main(void){
     }
 
     // Loop forever, retrieving the barometer data log file from the remote machine and 
-    // priniting it to stdout and the LCD every 5 minutes
+    // priniting it to stdout and the LCD every POLLTIME milliseconds
 
     while(TRUE){
         getLastReading();
@@ -280,7 +289,7 @@ int main(void){
            digitalWrite(LED,HIGH);
            backlighton=TRUE;
         }
-        delay(300000);
+        delay(POLLTIME);
     }
 
     // Should never get here ...
