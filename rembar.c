@@ -15,7 +15,7 @@
 /* To compile: gcc rembar.c -o rembar -lwiringPi -lwiringPiDev -Wall   */
 /*                                                                     */
 /* Tim Holyoake, 6th October 2019                                      */
-/*               Last updated 26th October 2019                        */
+/*               Last updated 10th November 2019                       */
 /*                                                                     */
 /***********************************************************************/
 #include <stdlib.h>
@@ -25,6 +25,7 @@
 #include <pcf8574.h>
 #include <lcd.h>
 #include <time.h>
+#include <unistd.h>
 
 #define I2CADDR 	0x27        	// default I2C address of PCF8574. This is 0x3A for a PCF8574A
 #define BASE 		64
@@ -77,9 +78,25 @@ void getLastReading() {
 /* Tim Holyoake, 6th October 2019                                      */
 /*               Modified 17th October 2019 to reduce the amount of    */
 /*               data copied over the network each time this is called */
+/*               Modified 10th November 2019 to try again if the       */
+/*               system call fails                                     */
 /*                                                                     */
 /***********************************************************************/
-    system("ssh pi@roobarb tail -1 /home/pi/zambretti/readings.txt > lastreading.txt");
+    int syserr, tries;
+    tries = 0;
+
+    syserr=system("ssh pi@roobarb tail -1 /home/pi/zambretti/readings.txt > lastreading.txt");
+
+    /* Try again for 10 minutes at one minute intervals if the system call fails */
+
+    while ((syserr != 0)&&(++tries<10)) {
+       sleep(600);
+       syserr=system("ssh pi@roobarb tail -1 /home/pi/zambretti/readings.txt > lastreading.txt");
+    }
+    
+    /* If the call to system is still failing after 10 minutes, end the program */
+
+    if (syserr !=0) exit(1);
 }
 
 void printBarFile() {
