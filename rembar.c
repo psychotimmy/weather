@@ -15,7 +15,7 @@
 /* To compile: gcc rembar.c -o rembar -lwiringPi -lwiringPiDev -Wall   */
 /*                                                                     */
 /* Tim Holyoake, 6th October 2019                                      */
-/*               Last updated 10th November 2019                       */
+/*               Last updated 14th December 2019                       */
 /*                                                                     */
 /***********************************************************************/
 #include <stdlib.h>
@@ -78,25 +78,28 @@ void getLastReading() {
 /* Tim Holyoake, 6th October 2019                                      */
 /*               Modified 17th October 2019 to reduce the amount of    */
 /*               data copied over the network each time this is called */
-/*               Modified 10th November 2019 to try again if the       */
-/*               system call fails                                     */
+/*               Modified 14th December 2019 to write a message to the */
+/*               LCD if the system call fails                          */
 /*                                                                     */
 /***********************************************************************/
-    int syserr, tries;
-    tries = 0;
+    int syserr;
+    FILE *fp;
 
-    syserr=system("ssh pi@roobarb tail -1 /home/pi/zambretti/readings.txt > lastreading.txt");
+    syserr=system("ssh pi@roobarb tail -1 /home/pi/zambretti/readings.txt > lastreading.txt"); 
 
-    /* Try again for 10 minutes at one minute intervals if the system call fails */
+    /* If the call to system is still failing after 10 minutes, write a message to be displayed */
+    /* into lastreading.txt using the dd:mm:yyyy:hh:mm,temperature,dewpoint,humidity,pressure   */
+    /* pressure change,forecast format used by printBarFile()                                   */
 
-    while ((syserr != 0)&&(++tries<10)) {
-       sleep(600);
-       syserr=system("ssh pi@roobarb tail -1 /home/pi/zambretti/readings.txt > lastreading.txt");
+    if (syserr !=0) {
+       fp=fopen("lastreading.txt","w");
+       if (fp == NULL) {
+          fprintf(stderr,"Unable to create new lastreading.txt file\n");
+          exit(1);
+       }
+       fputs("00:00:0000:00:00,0,0,0,000.0,0.00,>Barometer offline<",fp);
+       fclose(fp);
     }
-    
-    /* If the call to system is still failing after 10 minutes, end the program */
-
-    if (syserr !=0) exit(1);
 }
 
 void printBarFile() {
